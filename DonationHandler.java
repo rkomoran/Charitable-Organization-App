@@ -15,21 +15,35 @@
  * Mahir Daiyan Mahi; University of New Brunswick
  ****************************************************************/
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class DonationHandler {
+    private static final String FILE_NAME = "donations.txt";
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        List<Donation> donations = new ArrayList<>();
-
+        List<Donation> donations = loadDonations();
+        
         System.out.println("\n=== Donation Handler - V1.0 ===");
 
         while (true) {
             System.out.print("\nEnter donor name (or 'quit' to exit): ");
             String name = scanner.nextLine();
             if (name.toLowerCase().equals("quit")) {
+                System.out.print("\nClear donations.txt (Y/N): ");
+                String response = scanner.nextLine();
+                try {
+                    if (response.toLowerCase().charAt(0) == 'y') {
+                    clearDonationsFile();
+                    System.out.println("donations.txt cleared.");
+                }
+                } catch (Exception e) {
+                    System.out.println("donations.txt not cleared.");
+                }
+                
                 break;
             }
 
@@ -47,12 +61,15 @@ public class DonationHandler {
                 continue;
             }
 
-            donations.add(new Donation(name, amount));
+            Donation donation = new Donation(name, amount);
+            donations.add(donation);
+            saveDonation(donation);
+
             System.out.printf("\nDonation received from %s of $%.2f!\n", name, amount);
             printSummary(donations);
         }
 
-        System.out.println("Exiting simulation...");
+        System.out.println("\nExiting simulation...");
     }
 
     public static void printSummary(List<Donation> donations) {
@@ -63,5 +80,40 @@ public class DonationHandler {
             total += donation.amount;
         }
         System.out.printf("------------------------\nTotal Raised: $%.2f\n", total);
+    }
+
+
+    private static void saveDonation(Donation donation) {
+        try (FileWriter writer = new FileWriter(FILE_NAME, true)) {
+            writer.write(donation.toString() + "\n");
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
+    private static List<Donation> loadDonations() {
+        List<Donation> list = new ArrayList<>();
+        File file = new File(FILE_NAME);
+        if (!file.exists()) return list;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                list.add(Donation.fromString(line));
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public static void clearDonationsFile() {
+        try (FileWriter writer = new FileWriter(FILE_NAME, false)) {
+            writer.write("");
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("Error clearing file: " + e.getMessage());
+        }
     }
 }
