@@ -2,12 +2,13 @@
  * File Name: DonationHandler.java
  * Author:  Group 7, University of New Brunswick
  * Date: 29-10-2025
- * Version: 1.0
+ * Version: 2.0
  * Description: A simple donation handler backend simulation in Java.
  *
  ****************************************************************
  * Modification History:
  * [29-10-2025] - Original File Developed by Group 7.
+ * [29-10-2025] - Version 2.0: Added file persistence for donations.
  * 
  ****************************************************************
  * Questions/Comments: Please email Said Obaid at sobaid@unb.ca
@@ -27,7 +28,7 @@ public class DonationHandler {
         Scanner scanner = new Scanner(System.in);
         List<Donation> donations = loadDonations();
         
-        System.out.println("\n=== Donation Handler - V1.0 ===");
+        System.out.println("\n=== Donation Handler - V2.0 ===");
 
         while (true) {
             System.out.print("\nEnter donor name (or 'quit' to exit): ");
