@@ -10,7 +10,9 @@
  ****************************************************************
  * Modification History:
  * [29-10-2025] - Original File Developed by Group 7.
- * [3-11-2025] - Reworked GUI Implementation Added by Group 7.
+ * [3-11-2025] - Reworked GUI Implementation Added.
+ * [4-11-2025] - Improved Donation handling and Processing Logic.
+ *             - Made donation button default for enter key.
  * 
  ****************************************************************
  * Questions/Comments: Please email Said Obaid at sobaid@unb.ca
@@ -133,6 +135,7 @@ public class DonationApp extends Application {
 
         Button donate = new Button("Donate");
         donate.setOnAction(e -> makeDonation());
+        donate.setDefaultButton(true);
 
         Button back = new Button("Back");
         back.setOnAction(e -> stage.setScene(homeScene = makeHomeScene()));
