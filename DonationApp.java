@@ -19,116 +19,222 @@
  ****************************************************************/
 
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
+import javafx.scene.text.*;
 import javafx.stage.Stage;
-
 import java.text.NumberFormat;
-
-import java.io.*;
 import java.util.*;
 
 public class DonationApp extends Application {
-  private final ListView<String> list = new ListView<>();
-  private final TextField nameField = new TextField();
-  private final TextField amountField = new TextField();
-  private final Label totalLabel = new Label("Total: $0.00");
-  private double total = 0.0;
-  private final NumberFormat currency = NumberFormat.getCurrencyInstance(Locale.CANADA);
 
-  private static final String FILE_NAME = "donations.csv";
-  List<Donation> donations = DonationFiler.loadDonations(FILE_NAME);
+    // --- Storage
+    private final DonationFiler store = new DonationFiler("donations.csv");
+    private static final double GOAL = 5000.0; // goal for progress bar
+    private final NumberFormat money = NumberFormat.getCurrencyInstance(Locale.CANADA);
 
-  private void initialize() {
-    if (!donations.isEmpty()) {
-      for (Donation donation : donations) {
-        list.getItems().add(donation.getDonorName() + " — " + currency.format(donation.getAmount()));
-        total += donation.getAmount();
-      }
-      totalLabel.setText("Total: " + currency.format(total));
-    }
-  }
-  
-  public void start(Stage stage) {
-    stage.setTitle("Donations (Simple)");
+    // --- JavaFX pieces
+    private Stage stage;
+    private Scene homeScene, donateScene;
+    private TextField nameField, customField;
+    private Label totalLabel, yourLabel, quickDesc;
+    private ProgressBar totalBar, yourBar;
 
-    nameField.setPromptText("Name");
-    amountField.setPromptText("Amount (e.g., 25 or 25.00)");
+    // --- For leaderboard
+    private final ObservableList<String> feed = FXCollections.observableArrayList();
+    private final Random rng = new Random();
+    private static final String[] MESSAGES = {
+        "%s donated %s to support local families.",
+        "%s just gave %s — thank you!",
+        "%s contributed %s to the mission.",
+        "A round of applause for %s’s %s gift!"
+    };
 
-    Button addButton = new Button("Add");
-    
-    addButton.setDefaultButton(true); // Connecting Enter key to add donation button; essentially another way to trigger add()
-                                      // -> is a lambda expression, first time using it -SO
-    addButton.setOnAction(e -> add()); // e for event
+    private double total = 0;
+    private double currentAmount = 0;
 
-    Button clearButton = new Button("Clear");
-    
-    clearButton.setOnAction(e -> clear());
-  
-    HBox row = new HBox(8, new Label("Name:"), nameField, new Label("Amount:"), amountField, addButton, clearButton);
-    row.setPadding(new Insets(10));
+    @Override
+    public void start(Stage stage) {
+        this.stage = stage;
+        total = store.sumAll();       // start with total from CSV
+        loadFeedFromFile();           // fill the leaderboard
 
-    // Bold the total label, just for emphasis
-    totalLabel.setStyle("-fx-font-weight: bold");
+        homeScene = makeHomeScene();
+        donateScene = makeDonateScene();
 
-    VBox root = new VBox(8, row, list, new Separator(), totalLabel);
-    root.setPadding(new Insets(12));
-
-    initialize();
-
-    stage.setScene(new Scene(root, 580, 360));
-    stage.show();
-  }
-
-  private void add() {
-    String name = nameField.getText().trim();
-    String amtText = amountField.getText().trim();
-
-    if (name.isEmpty()) { 
-      alert("Please enter a name."); 
-      return; 
-    }
-    double amount;
-    try {
-      amount = Double.parseDouble(amtText);
-      if (amount <= 0) { alert("Amount must be positive."); return; }
-    } catch (NumberFormatException ex) {
-      alert("Amount must be a number (e.g., 25 or 25.00).");
-      return;
+        stage.setTitle("Helping Hands Charity");
+        stage.setScene(homeScene);
+        stage.show();
     }
 
-    Donation donation = new Donation(name, amount);
-    donations.add(donation);
-    DonationFiler.saveDonation(donation, FILE_NAME);
+    /* =========================
+       HOME SCREEN
+       ========================= */
+    private Scene makeHomeScene() {
+        Text title = new Text("Helping Hands Charity");
+        title.setFont(Font.font("System", FontWeight.BOLD, 26));
 
-    list.getItems().add(name + " — " + currency.format(amount));
-    total += amount;
-    totalLabel.setText("Total: " + currency.format(total));
+        Label info = new Label(
+            "We help Fredericton families with food, shelter, and support.\n" +
+            "Your donations make real impact in our community."
+        );
+        info.setWrapText(true);
 
-    nameField.clear();
-    amountField.clear();
-    nameField.requestFocus();
-  }
+        ProgressBar bar = new ProgressBar(ratio(total));
+        Label raised = new Label("Total raised: " + money.format(total) + " / " + money.format(GOAL));
 
-  private void clear() {
-    DonationFiler.clearDonationsFile(FILE_NAME);
+        Button donate = new Button("Donate Now");
+        donate.setOnAction(e -> stage.setScene(donateScene));
 
-    list.getItems().clear();
-    donations.clear();
-    total = 0.0;
-    totalLabel.setText("Total: " + currency.format(total));
+        VBox feedBox = makeLeaderboardBox();
 
-    nameField.clear();
-    amountField.clear();
-    nameField.requestFocus();
-  }
+        VBox layout = new VBox(16, title, info, donate, bar, raised, new Separator(), feedBox);
+        layout.setPadding(new Insets(20));
+        layout.setAlignment(Pos.TOP_LEFT);
 
-  private void alert(String msg) {
-    new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
-  }
+        return new Scene(layout, 700, 500);
+    }
 
-  public static void main(String[] args) { launch(args); }
+    /* =========================
+       DONATE SCREEN
+       ========================= */
+    private Scene makeDonateScene() {
+        Text title = new Text("Make a Donation");
+        title.setFont(Font.font("System", FontWeight.BOLD, 24));
+
+        nameField = new TextField();
+        nameField.setPromptText("Your name (optional)");
+
+        // Quick amount buttons
+        Button b25 = quickButton(25, "Buys a week of groceries.");
+        Button b50 = quickButton(50, "Funds hygiene kits.");
+        Button b100 = quickButton(100, "Supports emergency shelter.");
+        HBox quicks = new HBox(10, b25, b50, b100);
+        quickDesc = new Label("Pick an amount or enter your own below.");
+
+        // Custom amount
+        customField = new TextField();
+        customField.setPromptText("Custom amount (e.g., 37.50)");
+        customField.textProperty().addListener((o, oldV, newV) -> {
+            currentAmount = parse(newV);
+            refreshYourBar();
+        });
+
+        yourBar = new ProgressBar(0);
+        yourLabel = new Label("Your donation: " + money.format(0));
+
+        totalBar = new ProgressBar(ratio(total));
+        totalLabel = new Label("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+
+        Button donate = new Button("Donate");
+        donate.setOnAction(e -> makeDonation());
+
+        Button back = new Button("Back");
+        back.setOnAction(e -> stage.setScene(homeScene = makeHomeScene()));
+
+        VBox feedBox = makeLeaderboardBox();
+
+        VBox layout = new VBox(15, title,
+                new Label("Name:"), nameField,
+                new Label("Quick amounts:"), quicks,
+                quickDesc,
+                new Label("Custom amount:"), customField,
+                yourLabel, yourBar,
+                totalLabel, totalBar,
+                new Separator(), feedBox,
+                new Separator(), new HBox(10, donate, back)
+        );
+        layout.setPadding(new Insets(20));
+
+        return new Scene(layout, 700, 600);
+    }
+
+    /* =========================
+       HELPER METHODS
+       ========================= */
+    private Button quickButton(int amount, String desc) {
+        Button b = new Button("$" + amount);
+        b.setOnAction(e -> {
+            customField.setText(String.valueOf(amount));
+            quickDesc.setText(desc);
+        });
+        return b;
+    }
+
+    private void makeDonation() {
+        double amount = parse(customField.getText());
+        if (amount <= 0) {
+            new Alert(Alert.AlertType.WARNING, "Please enter a valid amount.").showAndWait();
+            return;
+        }
+
+        String name = nameField.getText().trim();
+        if (name.isBlank()) name = "Anonymous";
+
+        store.append(new Donation(name, amount));
+        total += amount;
+
+        // Update UI
+        yourBar.setProgress(0);
+        yourLabel.setText("Your donation: " + money.format(0));
+        totalBar.setProgress(ratio(total));
+        totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+
+        addToFeed(name, amount);
+
+        // Thank the donor
+        new Alert(Alert.AlertType.INFORMATION,
+                "Thank you for donating " + money.format(amount) + "!").showAndWait();
+
+        // Reset fields
+        nameField.clear();
+        customField.clear();
+    }
+
+    private VBox makeLeaderboardBox() {
+        Label title = new Label("Recent Supporters");
+        title.setFont(Font.font("System", FontWeight.SEMI_BOLD, 15));
+
+        ListView<String> list = new ListView<>(feed);
+        list.setPrefHeight(200);
+        list.setPlaceholder(new Label("No donations yet."));
+
+        return new VBox(8, title, list);
+    }
+
+    private void loadFeedFromFile() {
+        for (Donation d : store.loadAll()) {
+            addToFeed(d.getName(), d.getAmount());
+        }
+    }
+
+    private void addToFeed(String name, double amount) {
+        String msg = String.format(MESSAGES[rng.nextInt(MESSAGES.length)],
+                                   name, money.format(amount));
+        feed.add(0, msg);
+        if (feed.size() > 8) feed.remove(feed.size() - 1); // keep short
+    }
+
+    private void refreshYourBar() {
+        yourBar.setProgress(ratio(currentAmount));
+        yourLabel.setText("Your donation: " + money.format(currentAmount));
+    }
+
+    private double ratio(double x) {
+        return Math.min(1.0, Math.max(0.0, x / GOAL));
+    }
+
+    private double parse(String s) {
+        try { return Double.parseDouble(s.trim()); }
+        catch (Exception e) { return 0.0; }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

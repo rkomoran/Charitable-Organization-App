@@ -17,47 +17,63 @@
  * Mahir Daiyan Mahi; University of New Brunswick
  ****************************************************************/
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DonationFiler {
-    public static void saveDonation(Donation donation, String FILE_NAME) {
-        try (FileWriter writer = new FileWriter(FILE_NAME, true)) {
-            writer.write(donation.toString() + "\n");
-            writer.close();
+class DonationFiler {
+
+    private final String fileName;
+
+    DonationFiler(String fileName) {
+        this.fileName = fileName;
+        makeFileIfMissing();  // Ensure file exists
+    }
+
+    // Create the CSV file if it doesn't already exist.
+    private void makeFileIfMissing() {
+        try {
+            File f = new File(fileName);
+            if (!f.exists()) {
+                new FileWriter(f, false).close();
+            }
         } catch (IOException e) {
-            System.out.println("Error writing to file: " + e.getMessage());
+            System.out.println("Error creating file: " + e.getMessage());
         }
     }
 
-    public static List<Donation> loadDonations(String FILE_NAME) {
-        List<Donation> list = new ArrayList<>();
-        File file = new File(FILE_NAME);
-        if (!file.exists()) return list;
+    // Add a single donation to the file.
+    public void append(Donation d) {
+        try (FileWriter w = new FileWriter(fileName, true)) { // true = append mode
+            w.write(d.toString());
+            w.write(System.lineSeparator());
+        } catch (IOException e) {
+            System.out.println("Error writing donation: " + e.getMessage());
+        }
+    }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+    // Read all donations from the file and return them as a list.
+    public List<Donation> loadAll() {
+        List<Donation> list = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = br.readLine()) != null) {
-                list.add(Donation.fromString(line));
+                if (!line.isBlank()) {
+                    list.add(Donation.fromString(line));
+                }
             }
         } catch (IOException e) {
-            System.out.println("Error reading file: " + e.getMessage());
+            System.out.println("Error reading donations: " + e.getMessage());
         }
         return list;
     }
 
-    public static void clearDonationsFile(String FILE_NAME) {
-        try (FileWriter writer = new FileWriter(FILE_NAME, false)) {
-            writer.write("");
-            writer.close();
-        } catch (IOException e) {
-            System.out.println("Error clearing file: " + e.getMessage());
+    // Add up all donations in the file.
+    public double sumAll() {
+        double total = 0.0;
+        for (Donation d : loadAll()) {
+            total += d.getAmount();
         }
+        return total;
     }
-  
 }
