@@ -88,7 +88,12 @@ public class DonationApp extends Application {
         info.setWrapText(true);
 
         ProgressBar bar = new ProgressBar(ratio(total));
-        Label raised = new Label("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+        Label raised;
+        if (total >= GOAL) {
+            raised = new Label("🎉 Goal Reached! Total: " + money.format(total) + " 🎉");
+        } else {
+            raised = new Label("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+        }
 
         Button donate = new Button("Donate Now");
         donate.setOnAction(e -> stage.setScene(donateScene));
@@ -180,19 +185,33 @@ public class DonationApp extends Application {
         if (name.isBlank()) name = "Anonymous";
 
         store.append(new Donation(name, amount));
+
+        // Check if goal was just reached
+        boolean reachedGoal = (total < GOAL) && (total + amount >= GOAL);
         total += amount;
 
         // Update UI
         yourBar.setProgress(0);
         yourLabel.setText("Your donation: " + money.format(0));
         totalBar.setProgress(ratio(total));
-        totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+        // Update the label text based on whether goal is reached
+        if (total >= GOAL) {
+            totalLabel.setText("🎉 Goal Reached! Total: " + money.format(total) + " 🎉");
+        } else {
+            totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+        }
 
         addToFeed(name, amount);
 
         // Thank the donor
-        new Alert(Alert.AlertType.INFORMATION,
-                "Thank you for donating " + money.format(amount) + "!").showAndWait();
+        String message = "Thank you for donating " + money.format(amount) + "!";
+
+        // Add goal reached message if applicable
+        if (reachedGoal) {
+            message += "\n\nWe've reached our goal of " + money.format(GOAL) + "!";
+        }
+
+        new Alert(Alert.AlertType.INFORMATION, message).showAndWait();
 
         // Reset fields
         nameField.clear();
