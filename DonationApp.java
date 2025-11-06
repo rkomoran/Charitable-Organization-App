@@ -90,7 +90,7 @@ public class DonationApp extends Application {
         ProgressBar bar = new ProgressBar(ratio(total));
         Label raised;
         if (total >= GOAL) {
-            raised = new Label("🎉 Goal Reached! Total: " + money.format(total) + " 🎉");
+            raised = new Label("Goal Reached! Total: " + money.format(total));
         } else {
             raised = new Label("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
@@ -196,7 +196,7 @@ public class DonationApp extends Application {
         totalBar.setProgress(ratio(total));
         // Update the label text based on whether goal is reached
         if (total >= GOAL) {
-            totalLabel.setText("🎉 Goal Reached! Total: " + money.format(total) + " 🎉");
+            totalLabel.setText("Goal Reached! Total: " + money.format(total));
         } else {
             totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
