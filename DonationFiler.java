@@ -59,7 +59,10 @@ class DonationFiler {
             String line;
             while ((line = br.readLine()) != null) {
                 if (!line.isBlank()) {
-                    list.add(Donation.fromString(line));
+                    Donation d = Donation.fromString(line);
+                    if (d != null) {  // Only add valid donations
+                        list.add(d);
+                    }
                 }
             }
         } catch (IOException e) {

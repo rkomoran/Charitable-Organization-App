@@ -24,6 +24,11 @@ class Donation {
 
     // Make a new donation with a name and an amount.
     Donation(String name, double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException(
+                    "Donation amount cannot be negative. Received: " + amount
+            );
+        }
         this.name = name;
         this.amount = amount;
     }
