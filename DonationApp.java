@@ -90,7 +90,7 @@ public class DonationApp extends Application {
         ProgressBar bar = new ProgressBar(ratio(total));
         Label raised;
         if (total >= GOAL) {
-            raised = new Label("🎉 Goal Reached! Total: " + money.format(total) + " 🎉");
+            raised = new Label("🎉🎉🎉 Goal Reached! Total: " + money.format(total) + " 🎉🎉🎉");
         } else {
             raised = new Label("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
@@ -98,9 +98,14 @@ public class DonationApp extends Application {
         Button donate = new Button("Donate Now");
         donate.setOnAction(e -> stage.setScene(donateScene));
 
+        Button clear = new Button("Clear");
+        clear.setOnAction(e -> clearAll());
+
+        HBox actions = new HBox(10, donate, clear);
+
         VBox feedBox = makeLeaderboardBox();
 
-        VBox layout = new VBox(16, title, info, donate, bar, raised, new Separator(), feedBox);
+        VBox layout = new VBox(16, title, info, actions, bar, raised, new Separator(), feedBox);
         layout.setPadding(new Insets(20));
         layout.setAlignment(Pos.TOP_LEFT);
 
@@ -249,6 +254,19 @@ public class DonationApp extends Application {
 
     private double ratio(double x) {
         return Math.min(1.0, Math.max(0.0, x / GOAL));
+    }
+
+    private void clearAll() {
+        // wipe CSV
+        store.clearFile();
+
+        // reset in-memory state
+        total = 0.0;
+        feed.clear();
+
+        // rebuild the Home scene so progress/labels refresh
+        homeScene = makeHomeScene();
+        stage.setScene(homeScene);
     }
 
     private double parse(String s) {

@@ -71,6 +71,16 @@ class DonationFiler {
         return list;
     }
 
+    // Truncate the donations file to zero length.
+    public void clearFile() {
+        try (FileWriter w = new FileWriter(fileName, false)) {
+            // overwrite with nothing
+        } catch (IOException e) {
+            System.out.println("Error clearing donations: " + e.getMessage());
+        }
+    }
+
+
     // Add up all donations in the file.
     public double sumAll() {
         double total = 0.0;
