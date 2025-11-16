@@ -79,7 +79,7 @@ public class DonationApp extends Application {
 				"Your donations make real impact in our community."
         );
         info.setWrapText(true);
-		info.setMaxWidth(660);
+		info.setMaxWidthProperty().bind(layout.widthProperty().subtract(40));
 
         ProgressBar bar = new ProgressBar(ratio(total));
         Label raised;
