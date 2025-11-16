@@ -76,10 +76,9 @@ public class DonationApp extends Application {
 
         Label info = new Label(
 			"We help Fredericton families with food, shelter, and support.\n" +
-				"Your donations make real impact in our community."
+			"Your donations make real impact in our community."
         );
         info.setWrapText(true);
-		info.setMaxWidthProperty().bind(layout.widthProperty().subtract(40));
 
         ProgressBar bar = new ProgressBar(ratio(total));
         Label raised;
