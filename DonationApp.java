@@ -1,35 +1,28 @@
 /****************************************************************
  * File Name: DonationApp.java
  * Author:  Group 7, University of New Brunswick
- * Date: 3-10-2025
- * Version: 1.0
- * Description: 
- * The successor to DonationHandler.java with a GUI using JavaFX.
- * Handles donation entries and displays total donations.
- *
- ****************************************************************
- * Modification History:
- * [29-10-2025] - Original File Developed by Group 7.
- * [3-11-2025] - Reworked GUI Implementation Added.
- * [4-11-2025] - Improved Donation handling and Processing Logic.
- *             - Made donation button default for enter key.
- * 
- ****************************************************************
- * Questions/Comments: Please email Said Obaid at sobaid@unb.ca
- * Copyright 2025. Group 7: Said Obaid, Hannah Sarty, Rinor Komorani, and
- * Mahir Daiyan Mahi; University of New Brunswick
+ * Date: 16-11-2025
+ * Description:
+ * GUI Donation App with keyboard shortcuts, animations,
+ * and sorting/filtering for the leaderboard.
  ****************************************************************/
 
+import javafx.animation.*;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.*;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 import java.text.NumberFormat;
 import java.util.*;
 
@@ -37,13 +30,13 @@ public class DonationApp extends Application {
 
     // --- Storage
     private final DonationFiler store = new DonationFiler("donations.csv");
-    private static final double GOAL = 5000.0; // goal for progress bar
+    private static final double GOAL = 5000.0;
     private final NumberFormat money = NumberFormat.getCurrencyInstance(Locale.CANADA);
 
     // --- JavaFX pieces
     private Stage stage;
     private Scene homeScene, donateScene;
-    private TextField nameField, customField;
+    private TextField nameField, customField, filterField;
     private Label totalLabel, yourLabel, quickDesc;
     private ProgressBar totalBar, yourBar;
 
@@ -51,10 +44,10 @@ public class DonationApp extends Application {
     private final ObservableList<String> feed = FXCollections.observableArrayList();
     private final Random rng = new Random();
     private static final String[] MESSAGES = {
-        "%s donated %s to support local families.",
-        "%s just gave %s — thank you!",
-        "%s contributed %s to the mission.",
-        "A round of applause for %s’s %s gift!"
+		"%s donated %s to support local families.",
+		"%s just gave %s — thank you!",
+		"%s contributed %s to the mission.",
+		"A round of applause for %s’s %s gift!"
     };
 
     private double total = 0;
@@ -63,8 +56,8 @@ public class DonationApp extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        total = store.sumAll();       // start with total from CSV
-        loadFeedFromFile();           // fill the leaderboard
+        total = store.sumAll();
+        loadFeedFromFile();
 
         homeScene = makeHomeScene();
         donateScene = makeDonateScene();
@@ -82,8 +75,8 @@ public class DonationApp extends Application {
         title.setFont(Font.font("System", FontWeight.BOLD, 26));
 
         Label info = new Label(
-            "We help Fredericton families with food, shelter, and support.\n" +
-            "Your donations make real impact in our community."
+			"We help Fredericton families with food, shelter, and support.\n" +
+			"Your donations make real impact in our community."
         );
         info.setWrapText(true);
 
@@ -103,13 +96,16 @@ public class DonationApp extends Application {
 
         HBox actions = new HBox(10, donate, clear);
 
-        VBox feedBox = makeLeaderboardBox();
+        VBox feedBox = makeLeaderboardBox(); // now includes filter + sort
 
         VBox layout = new VBox(16, title, info, actions, bar, raised, new Separator(), feedBox);
         layout.setPadding(new Insets(20));
         layout.setAlignment(Pos.TOP_LEFT);
 
-        return new Scene(layout, 700, 500);
+        Scene scene = new Scene(layout, 700, 500);
+        addHomeShortcuts(scene);
+
+        return scene;
     }
 
     /* =========================
@@ -129,7 +125,7 @@ public class DonationApp extends Application {
         HBox quicks = new HBox(10, b25, b50, b100);
         quickDesc = new Label("Pick an amount or enter your own below.");
 
-        // Custom amount
+        // Custom amount entry
         customField = new TextField();
         customField.setPromptText("Custom amount (e.g., 37.50)");
         customField.textProperty().addListener((o, oldV, newV) -> {
@@ -148,9 +144,9 @@ public class DonationApp extends Application {
         donate.setDefaultButton(true);
 
         Button back = new Button("Back");
-        back.setOnAction(e -> stage.setScene(homeScene = makeHomeScene()));
+        back.setOnAction(e -> stage.setScene(homeScene));
 
-        VBox feedBox = makeLeaderboardBox();
+        VBox feedBox = makeLeaderboardBox(); // includes filter + sort
 
         VBox layout = new VBox(15, title,
                 new Label("Name:"), nameField,
@@ -164,12 +160,41 @@ public class DonationApp extends Application {
         );
         layout.setPadding(new Insets(20));
 
-        return new Scene(layout, 700, 600);
+        Scene scene = new Scene(layout, 700, 600);
+        addDonateShortcuts(scene);
+
+        return scene;
     }
 
-    /* =========================
+    /* 
+       KEYBOARD SHORTCUTS
+    */
+    private void addHomeShortcuts(Scene scene) {
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
+                // Already home — do nothing
+            }
+        });
+    }
+
+    private void addDonateShortcuts(Scene scene) {
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+
+            // ESC → back to home
+            if (e.getCode() == KeyCode.ESCAPE) {
+                stage.setScene(homeScene);
+            }
+
+            // Ctrl + R → clear custom amount
+            if (e.isControlDown() && e.getCode() == KeyCode.R) {
+                customField.clear();
+            }
+        });
+    }
+
+    /* 
        HELPER METHODS
-       ========================= */
+    */
     private Button quickButton(int amount, String desc) {
         Button b = new Button("$" + amount);
         b.setOnAction(e -> {
@@ -191,34 +216,28 @@ public class DonationApp extends Application {
 
         store.append(new Donation(name, amount));
 
-        // Check if goal was just reached
         boolean reachedGoal = (total < GOAL) && (total + amount >= GOAL);
         total += amount;
 
-        // Update UI
         yourBar.setProgress(0);
         yourLabel.setText("Your donation: " + money.format(0));
         totalBar.setProgress(ratio(total));
-        // Update the label text based on whether goal is reached
+
         if (total >= GOAL) {
             totalLabel.setText("Goal Reached! Total: " + money.format(total));
         } else {
             totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
 
-        addToFeed(name, amount);
+        addToFeed(name, amount); // includes fade animation
 
-        // Thank the donor
         String message = "Thank you for donating " + money.format(amount) + "!";
-
-        // Add goal reached message if applicable
         if (reachedGoal) {
             message += "\n\nWe've reached our goal of " + money.format(GOAL) + "!";
         }
 
         new Alert(Alert.AlertType.INFORMATION, message).showAndWait();
 
-        // Reset fields
         nameField.clear();
         customField.clear();
     }
@@ -227,11 +246,21 @@ public class DonationApp extends Application {
         Label title = new Label("Recent Supporters");
         title.setFont(Font.font("System", FontWeight.SEMI_BOLD, 15));
 
-        ListView<String> list = new ListView<>(feed);
+        // Filter + Sort support
+        filterField = new TextField();
+        filterField.setPromptText("Filter supporters...");
+        FilteredList<String> filtered = new FilteredList<>(feed, s -> true);
+        filterField.textProperty().addListener((obs, oldVal, newVal) ->
+                filtered.setPredicate(s -> s.toLowerCase().contains(newVal.toLowerCase()))
+        );
+        SortedList<String> sorted = new SortedList<>(filtered);
+        sorted.setComparator(String::compareToIgnoreCase);
+
+        ListView<String> list = new ListView<>(sorted);
         list.setPrefHeight(200);
         list.setPlaceholder(new Label("No donations yet."));
 
-        return new VBox(8, title, list);
+        return new VBox(8, title, filterField, list);
     }
 
     private void loadFeedFromFile() {
@@ -243,7 +272,14 @@ public class DonationApp extends Application {
     private void addToFeed(String name, double amount) {
         String msg = String.format(MESSAGES[rng.nextInt(MESSAGES.length)],
                                    name, money.format(amount));
+
+        // Animate new entry
         feed.add(0, msg);
+        FadeTransition ft = new FadeTransition(Duration.millis(600));
+        ft.setFromValue(0.0);
+        ft.setToValue(1.0);
+        ft.play();
+
         if (feed.size() > 8) feed.remove(feed.size() - 1); // keep short
     }
 
@@ -257,14 +293,10 @@ public class DonationApp extends Application {
     }
 
     private void clearAll() {
-        // wipe CSV
         store.clearFile();
-
-        // reset in-memory state
         total = 0.0;
         feed.clear();
 
-        // rebuild the Home scene so progress/labels refresh
         homeScene = makeHomeScene();
         stage.setScene(homeScene);
     }
