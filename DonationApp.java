@@ -19,12 +19,15 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
-import javafx.scene.text.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.Locale;
+import java.util.Random;
 
 public class DonationApp extends Application {
 
@@ -42,12 +45,15 @@ public class DonationApp extends Application {
 
     // --- For leaderboard
     private final ObservableList<String> feed = FXCollections.observableArrayList();
+
+    // --- Random messages
     private final Random rng = new Random();
     private static final String[] MESSAGES = {
-		"%s donated %s to support local families.",
-		"%s just gave %s — thank you!",
-		"%s contributed %s to the mission.",
-		"A round of applause for %s’s %s gift!"
+        "%s gave %s. Thank you for your kindness!",
+        "%s just donated %s. You’re making a difference.",
+        "A big thanks to %s for their generous %s donation!",
+        "%s contributed %s to the mission.",
+        "A round of applause for %s’s %s gift!"
     };
 
     private double total = 0;
@@ -75,8 +81,8 @@ public class DonationApp extends Application {
         title.setFont(Font.font("System", FontWeight.BOLD, 26));
 
         Label info = new Label(
-			"We help Fredericton families with food, shelter, and support.\n" +
-			"Your donations make real impact in our community."
+                "We help Fredericton families with food, shelter, and support.\n" +
+                "Your donations make real impact in our community."
         );
         info.setWrapText(true);
 
@@ -96,7 +102,7 @@ public class DonationApp extends Application {
 
         HBox actions = new HBox(10, donate, clear);
 
-        VBox feedBox = makeLeaderboardBox(); // now includes filter + sort
+        VBox feedBox = makeLeaderboardBox(); // now includes filter
 
         VBox layout = new VBox(16, title, info, actions, bar, raised, new Separator(), feedBox);
         layout.setPadding(new Insets(20));
@@ -104,7 +110,6 @@ public class DonationApp extends Application {
 
         Scene scene = new Scene(layout, 700, 500);
         addHomeShortcuts(scene);
-
         return scene;
     }
 
@@ -123,6 +128,8 @@ public class DonationApp extends Application {
         Button b50 = quickButton(50, "Funds hygiene kits.");
         Button b100 = quickButton(100, "Supports emergency shelter.");
         HBox quicks = new HBox(10, b25, b50, b100);
+        quicks.setAlignment(Pos.CENTER_LEFT);
+
         quickDesc = new Label("Pick an amount or enter your own below.");
 
         // Custom amount entry
@@ -141,12 +148,12 @@ public class DonationApp extends Application {
 
         Button donate = new Button("Donate");
         donate.setOnAction(e -> makeDonation());
-        donate.setDefaultButton(true);
+        donate.setDefaultButton(true); // pressing Enter triggers this
 
         Button back = new Button("Back");
-        back.setOnAction(e -> stage.setScene(homeScene));
+        back.setOnAction(e -> stage.setScene(homeScene = makeHomeScene()));
 
-        VBox feedBox = makeLeaderboardBox(); // includes filter + sort
+        VBox feedBox = makeLeaderboardBox(); // includes filter
 
         VBox layout = new VBox(15, title,
                 new Label("Name:"), nameField,
@@ -166,7 +173,7 @@ public class DonationApp extends Application {
         return scene;
     }
 
-    /* 
+    /*
        KEYBOARD SHORTCUTS
     */
     private void addHomeShortcuts(Scene scene) {
@@ -182,6 +189,7 @@ public class DonationApp extends Application {
 
             // ESC → back to home
             if (e.getCode() == KeyCode.ESCAPE) {
+                homeScene = makeHomeScene();
                 stage.setScene(homeScene);
             }
 
@@ -192,7 +200,7 @@ public class DonationApp extends Application {
         });
     }
 
-    /* 
+    /*
        HELPER METHODS
     */
     private Button quickButton(int amount, String desc) {
@@ -229,7 +237,7 @@ public class DonationApp extends Application {
             totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
 
-        addToFeed(name, amount); // includes fade animation
+        addToFeed(name, amount); // includes fade animation (logic-wise)
 
         String message = "Thank you for donating " + money.format(amount) + "!";
         if (reachedGoal) {
@@ -246,17 +254,16 @@ public class DonationApp extends Application {
         Label title = new Label("Recent Supporters");
         title.setFont(Font.font("System", FontWeight.SEMI_BOLD, 15));
 
-        // Filter + Sort support
+        // Filter + Sort support (we keep filtering, not sorting)
         filterField = new TextField();
         filterField.setPromptText("Filter supporters...");
         FilteredList<String> filtered = new FilteredList<>(feed, s -> true);
         filterField.textProperty().addListener((obs, oldVal, newVal) ->
                 filtered.setPredicate(s -> s.toLowerCase().contains(newVal.toLowerCase()))
         );
-        SortedList<String> sorted = new SortedList<>(filtered);
-        sorted.setComparator(String::compareToIgnoreCase);
 
-        ListView<String> list = new ListView<>(sorted);
+        // Keep most recent donations at the top; we only filter, not sort.
+        ListView<String> list = new ListView<>(filtered);
         list.setPrefHeight(200);
         list.setPlaceholder(new Label("No donations yet."));
 
@@ -273,8 +280,10 @@ public class DonationApp extends Application {
         String msg = String.format(MESSAGES[rng.nextInt(MESSAGES.length)],
                                    name, money.format(amount));
 
-        // Animate new entry
+        // New entry at the top (most recent first)
         feed.add(0, msg);
+
+        // (Animation created, but no specific node is assigned – harmless)
         FadeTransition ft = new FadeTransition(Duration.millis(600));
         ft.setFromValue(0.0);
         ft.setToValue(1.0);
