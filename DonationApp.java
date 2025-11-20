@@ -89,7 +89,7 @@ public class DonationApp extends Application {
                 "Your donations make real impact in our community."
         );
         info.setWrapText(true);
-
+ 
         ProgressBar bar = new ProgressBar(ratio(total));
         Label raised;
         if (total >= GOAL) {
@@ -332,9 +332,8 @@ public class DonationApp extends Application {
         store.clearFile();
         total = 0.0;
         feed.clear();
-		raised.clear();
-		totalBar.clear()
-
+        totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
+		totalBar.setProgress(ratio(total));
         homeScene = makeHomeScene();
         stage.setScene(homeScene);
     }
