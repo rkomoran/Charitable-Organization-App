@@ -26,8 +26,11 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Random;
+
 
 public class DonationApp extends Application {
 
@@ -88,6 +91,7 @@ public class DonationApp extends Application {
         info.setWrapText(true);
 
         ProgressBar bar = new ProgressBar(ratio(total));
+        bar.setPrefHeight(40);
         Label raised;
         if (total >= GOAL) {
             raised = new Label("🎉🎉🎉 Goal Reached! Total: " + money.format(total) + " 🎉🎉🎉");
@@ -237,7 +241,9 @@ public class DonationApp extends Application {
         String name = nameField.getText().trim();
         if (name.isBlank()) name = "Anonymous";
 
-        store.append(new Donation(name, amount));
+        Donation newDonation = new Donation(name, amount);
+
+        store.append(newDonation);
 
         boolean reachedGoal = (total < GOAL) && (total + amount >= GOAL);
         total += amount;
@@ -252,7 +258,7 @@ public class DonationApp extends Application {
             totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
 
-        addToFeed(name, amount); // includes fade animation (logic-wise)
+        addToFeed(name, amount, newDonation.getTimestamp()); // includes fade animation (logic-wise)
 
         String message = "Thank you for donating " + money.format(amount) + "!";
         if (reachedGoal) {
@@ -286,14 +292,17 @@ public class DonationApp extends Application {
     }
 
     private void loadFeedFromFile() {
-        for (Donation d : store.loadAll()) {
-            addToFeed(d.getName(), d.getAmount());
+        for (Donation donation : store.loadAll()) {
+            addToFeed(donation.getName(), donation.getAmount(), donation.getTimestamp());
         }
     }
 
-    private void addToFeed(String name, double amount) {
+    private void addToFeed(String name, double amount, LocalDateTime timestamp) {
         String msg = String.format(MESSAGES[rng.nextInt(MESSAGES.length)],
                                    name, money.format(amount));
+        msg = String.format("%s: %s", 
+                timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
+                msg);
 
         // New entry at the top (most recent first)
         feed.add(0, msg);
