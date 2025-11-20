@@ -91,7 +91,6 @@ public class DonationApp extends Application {
         info.setWrapText(true);
 
         ProgressBar bar = new ProgressBar(ratio(total));
-        bar.setPrefHeight(40);
         Label raised;
         if (total >= GOAL) {
             raised = new Label("🎉🎉🎉 Goal Reached! Total: " + money.format(total) + " 🎉🎉🎉");
