@@ -127,7 +127,13 @@ public class DonationApp extends Application {
         Button b25 = quickButton(25, "Buys a week of groceries.");
         Button b50 = quickButton(50, "Funds hygiene kits.");
         Button b100 = quickButton(100, "Supports emergency shelter.");
-        HBox quicks = new HBox(10, b25, b50, b100);
+        Slider slider = new Slider(0, 500, 0);
+        slider.setShowTickLabels(true);
+        slider.setShowTickMarks(true);
+        slider.setMajorTickUnit(500);
+        slider.setMinorTickCount(4);
+
+        HBox quicks = new HBox(10, b25, b50, b100, slider);
         quicks.setAlignment(Pos.CENTER_LEFT);
 
         quickDesc = new Label("Pick an amount or enter your own below.");
@@ -135,8 +141,14 @@ public class DonationApp extends Application {
         // Custom amount entry
         customField = new TextField();
         customField.setPromptText("Custom amount (e.g., 37.50)");
+
+        slider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            customField.setText(String.format("%.0f", newValue));
+        });
+
         customField.textProperty().addListener((o, oldV, newV) -> {
             currentAmount = parse(newV);
+            slider.setValue(currentAmount);
             refreshYourBar();
         });
 
