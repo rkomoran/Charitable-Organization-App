@@ -34,6 +34,7 @@ public class DonationApp extends Application {
     // --- Storage
     private final DonationFiler store = new DonationFiler("donations.csv");
     private static final double GOAL = 5000.0;
+    private static final double SLIDERUPPERLIMIT = 500.0;
     private final NumberFormat money = NumberFormat.getCurrencyInstance(Locale.CANADA);
 
     // --- JavaFX pieces
@@ -127,7 +128,7 @@ public class DonationApp extends Application {
         Button b25 = quickButton(25, "Buys a week of groceries.");
         Button b50 = quickButton(50, "Funds hygiene kits.");
         Button b100 = quickButton(100, "Supports emergency shelter.");
-        Slider slider = new Slider(0, 500, 0);
+        Slider slider = new Slider(0, SLIDERUPPERLIMIT, 0);
         slider.setShowTickLabels(true);
         slider.setShowTickMarks(true);
         slider.setMajorTickUnit(500);
@@ -143,7 +144,9 @@ public class DonationApp extends Application {
         customField.setPromptText("Custom amount (e.g., 37.50)");
 
         slider.valueProperty().addListener((observable, oldValue, newValue) -> {
-            customField.setText(String.format("%.0f", newValue));
+            if (currentAmount <= SLIDERUPPERLIMIT) {
+                customField.setText(String.format("%.0f", newValue));
+            }
         });
 
         customField.textProperty().addListener((o, oldV, newV) -> {
