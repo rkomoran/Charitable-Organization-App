@@ -333,6 +333,8 @@ public class DonationApp extends Application {
         store.clearFile();
         total = 0.0;
         feed.clear();
+		raised.clear();
+		totalBar.clear()
 
         homeScene = makeHomeScene();
         stage.setScene(homeScene);
