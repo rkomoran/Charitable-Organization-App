@@ -113,7 +113,7 @@ public class DonationApp extends Application {
         layout.setPadding(new Insets(20));
         layout.setAlignment(Pos.TOP_LEFT);
 
-        Scene scene = new Scene(layout, 700, 500);
+        Scene scene = new Scene(layout, 600, 860);
         addHomeShortcuts(scene);
         return scene;
     }
@@ -186,7 +186,7 @@ public class DonationApp extends Application {
         );
         layout.setPadding(new Insets(20));
 
-        Scene scene = new Scene(layout, 700, 600);
+        Scene scene = new Scene(layout, 600, 860);
         addDonateShortcuts(scene);
 
         return scene;
@@ -265,7 +265,11 @@ public class DonationApp extends Application {
             message += "\n\nWe've reached our goal of " + money.format(GOAL) + "!";
         }
 
-        new Alert(Alert.AlertType.INFORMATION, message).showAndWait();
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Thank you!");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
 
         nameField.clear();
         customField.clear();
