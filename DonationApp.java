@@ -53,15 +53,16 @@ public class DonationApp extends Application {
     // --- Random messages
     private final Random rng = new Random();
     private static final String[] MESSAGES = {
-        "%s gave %s. Thank you for your kindness!",
-        "%s just donated %s. You’re making a difference.",
-        "A big thanks to %s for their generous %s donation!",
-        "%s contributed %s to the mission.",
-        "A round of applause for %s’s %s gift!"
+            "%s gave %s. Thank you for your kindness!",
+            "%s just donated %s. You’re making a difference.",
+            "A big thanks to %s for their generous %s donation!",
+            "%s contributed %s to the mission.",
+            "A round of applause for %s’s %s gift!"
     };
 
     private double total = 0;
     private double currentAmount = 0;
+    private boolean updatingFromText = false;
 
     @Override
     public void start(Stage stage) {
@@ -86,10 +87,10 @@ public class DonationApp extends Application {
 
         Label info = new Label(
                 "We help Fredericton families with food, shelter, and support.\n" +
-                "Your donations make real impact in our community."
+                        "Your donations make real impact in our community."
         );
         info.setWrapText(true);
- 
+
         ProgressBar bar = new ProgressBar(ratio(total));
         Label raised;
         if (total >= GOAL) {
@@ -106,7 +107,7 @@ public class DonationApp extends Application {
 
         HBox actions = new HBox(10, donate, clear);
 
-        VBox feedBox = makeLeaderboardBox(); // now includes filter
+        VBox feedBox = makeLeaderboardBox();
 
         VBox layout = new VBox(16, title, info, actions, bar, raised, new Separator(), feedBox);
         layout.setPadding(new Insets(20));
@@ -127,10 +128,13 @@ public class DonationApp extends Application {
         nameField = new TextField();
         nameField.setPromptText("Your name (optional)");
 
-        // Quick amount buttons
-        Button b25 = quickButton(25, "Buys a week of groceries.");
-        Button b50 = quickButton(50, "Funds hygiene kits.");
-        Button b100 = quickButton(100, "Supports emergency shelter.");
+        Button b25 = quickButton(25,
+                "This will help us feed a family for a day.");
+        Button b50 = quickButton(50,
+                "This will help us provide hygiene kits and warm clothing.");
+        Button b100 = quickButton(100,
+                "This will help support emergency shelter for families in crisis.");
+
         Slider slider = new Slider(0, SLIDERUPPERLIMIT, 0);
         slider.setShowTickLabels(true);
         slider.setShowTickMarks(true);
@@ -142,19 +146,24 @@ public class DonationApp extends Application {
 
         quickDesc = new Label("Pick an amount or enter your own below.");
 
-        // Custom amount entry
         customField = new TextField();
         customField.setPromptText("Custom amount (e.g., 37.50)");
 
         slider.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if (currentAmount <= SLIDERUPPERLIMIT) {
-                customField.setText(String.format("%.0f", newValue));
+            if (!updatingFromText && currentAmount <= SLIDERUPPERLIMIT) {
+                customField.setText(String.format("%.0f", newValue.doubleValue()));
             }
         });
 
         customField.textProperty().addListener((o, oldV, newV) -> {
             currentAmount = parse(newV);
-            slider.setValue(currentAmount);
+            double sliderValue = currentAmount;
+            if (sliderValue > SLIDERUPPERLIMIT) {
+                sliderValue = SLIDERUPPERLIMIT;
+            }
+            updatingFromText = true;
+            slider.setValue(sliderValue);
+            updatingFromText = false;
             refreshYourBar();
         });
 
@@ -166,12 +175,12 @@ public class DonationApp extends Application {
 
         Button donate = new Button("Donate");
         donate.setOnAction(e -> makeDonation());
-        donate.setDefaultButton(true); // pressing Enter triggers this
+        donate.setDefaultButton(true);
 
         Button back = new Button("Back");
         back.setOnAction(e -> stage.setScene(homeScene = makeHomeScene()));
 
-        VBox feedBox = makeLeaderboardBox(); // includes filter
+        VBox feedBox = makeLeaderboardBox();
 
         VBox layout = new VBox(15, title,
                 new Label("Name:"), nameField,
@@ -196,22 +205,18 @@ public class DonationApp extends Application {
     */
     private void addHomeShortcuts(Scene scene) {
         scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ESCAPE) {
-                // Already home — do nothing
-            }
+            if (e.getCode() == KeyCode.ESCAPE) {}
         });
     }
 
     private void addDonateShortcuts(Scene scene) {
         scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
 
-            // ESC → back to home
             if (e.getCode() == KeyCode.ESCAPE) {
                 homeScene = makeHomeScene();
                 stage.setScene(homeScene);
             }
 
-            // Ctrl + R → clear custom amount
             if (e.isControlDown() && e.getCode() == KeyCode.R) {
                 customField.clear();
             }
@@ -227,6 +232,7 @@ public class DonationApp extends Application {
             customField.setText(String.valueOf(amount));
             quickDesc.setText(desc);
         });
+        b.setTooltip(new Tooltip(desc));
         return b;
     }
 
@@ -257,7 +263,7 @@ public class DonationApp extends Application {
             totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
         }
 
-        addToFeed(name, amount, newDonation.getTimestamp()); // includes fade animation (logic-wise)
+        addToFeed(name, amount, newDonation.getTimestamp());
 
         String message = "Thank you for donating " + money.format(amount) + "!";
         if (reachedGoal) {
@@ -278,7 +284,6 @@ public class DonationApp extends Application {
         Label title = new Label("Recent Supporters");
         title.setFont(Font.font("System", FontWeight.SEMI_BOLD, 15));
 
-        // Filter + Sort support (we keep filtering, not sorting)
         filterField = new TextField();
         filterField.setPromptText("Filter supporters...");
         FilteredList<String> filtered = new FilteredList<>(feed, s -> true);
@@ -286,7 +291,6 @@ public class DonationApp extends Application {
                 filtered.setPredicate(s -> s.toLowerCase().contains(newVal.toLowerCase()))
         );
 
-        // Keep most recent donations at the top; we only filter, not sort.
         ListView<String> list = new ListView<>(filtered);
         list.setPrefHeight(200);
         list.setPlaceholder(new Label("No donations yet."));
@@ -302,21 +306,19 @@ public class DonationApp extends Application {
 
     private void addToFeed(String name, double amount, LocalDateTime timestamp) {
         String msg = String.format(MESSAGES[rng.nextInt(MESSAGES.length)],
-                                   name, money.format(amount));
-        msg = String.format("%s: %s", 
+                name, money.format(amount));
+        msg = String.format("%s: %s",
                 timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                 msg);
 
-        // New entry at the top (most recent first)
         feed.add(0, msg);
 
-        // (Animation created, but no specific node is assigned – harmless)
         FadeTransition ft = new FadeTransition(Duration.millis(600));
         ft.setFromValue(0.0);
         ft.setToValue(1.0);
         ft.play();
 
-        if (feed.size() > 8) feed.remove(feed.size() - 1); // keep short
+        if (feed.size() > 8) feed.remove(feed.size() - 1);
     }
 
     private void refreshYourBar() {
@@ -333,7 +335,7 @@ public class DonationApp extends Application {
         total = 0.0;
         feed.clear();
         totalLabel.setText("Total raised: " + money.format(total) + " / " + money.format(GOAL));
-		totalBar.setProgress(ratio(total));
+        totalBar.setProgress(ratio(total));
         homeScene = makeHomeScene();
         stage.setScene(homeScene);
     }
