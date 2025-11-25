@@ -1,4 +1,11 @@
-
+/****************************************************************
+ * File Name: Donation.java
+ * Author:  Group 7, University of New Brunswick
+ * Date: 25-11-2025
+ * Description:
+ * Class to process and store information for donations including 
+ * name, amount, and time stamp.
+ ****************************************************************/
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
